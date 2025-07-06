@@ -62,7 +62,7 @@ def create_databases(midi_path: str, train_length: int, step: int):
     return train_x, train_y, validate_x, validate_y
 
 def read_model(version: int):
-    model = load_model(filepath=f'model_{version}.keras')
+    model = load_model(filepath=f'model_{version}_best.keras')
     return model
 
 def get_seed():

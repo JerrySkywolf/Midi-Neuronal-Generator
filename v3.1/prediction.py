@@ -1,7 +1,7 @@
 import numpy as np
 from time import time
 from os import environ
-from mido import Message, MidiFile, MidiTrack, MetaMessage
+from mido import Message, MidiFile, MidiTrack, MetaMessage, bpm2tempo
 environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
@@ -52,26 +52,50 @@ class Predict:
             self.sequence.append(self.prediction[0])
 
     def save_track0(self):
-        self.track0.append(MetaMessage('time_signature', numerator=2, denominator=4, clocks_per_click=24, notated_32nd_notes_per_beat=8, time=0))
+        self.track0.append(MetaMessage('time_signature', numerator=4, denominator=4, time=0))
         self.track0.append(MetaMessage('key_signature', key='C', time=0))
-        self.track0.append(MetaMessage('set_tempo', tempo=1200000, time=0))
+        self.track0.append(MetaMessage('set_tempo', tempo=bpm2tempo(80), time=0))
         self.track0.append(MetaMessage('track_name', name=self.save_file_name, time=0))
         self.track0.append(MetaMessage('end_of_track', time=1))
 
     def save_track1(self):
         self.track1.append(MetaMessage('track_name', name='Piano', time=0))
         self.track1.append(Message(type='program_change', program=0, time=0))
+        middle = []
         for i in self.sequence:
             if i[0] < 0.5:
-                event_flag = 'note_off'
+                i[0] = 0
             else:
-                event_flag = 'note_on'
-            args = (int(i[1] * 128), int(i[2] * 128), int(i[3] * 128))
-            if args[0] > 127 or args[1] > 127:
+                i[0] = 1
+            args = (int(i[0]), int(i[1] * 128), int(i[2] * 128), int(i[3] * 128))
+            if args[1] > 127 or args[2] > 127:
                 continue
-            self.track1.append(Message(type=event_flag, note=args[0], velocity=args[1], time=args[2]))
+            elif args[3] > 1000:
+                continue
+            middle.append(args)
+        middle = np.array(middle).T
+        print(middle.shape)
+        a, b= middle[0].T, middle[1].T
+        count = 0
+        for i, j in enumerate(b):
+            if a[i] == 1:
+                c = middle.T[i + 1:]
+                if np.array([0, j]) not in c[:, :2]:
+                    middle_f = np.delete(middle, obj=i, axis=1)
+                    middle = middle_f
+                    print(middle_f)
+                    continue
+            count += 1
+        middle = middle.T
+        print(middle.shape)
+        for i in middle:
+            if i[0] < 0.5:
+               event_flag = 'note_off'
+            else:
+               event_flag = 'note_on'
+            self.track1.append(Message(type=event_flag, note=i[1], velocity=i[2], time=i[3]))
         self.track1.append(MetaMessage('end_of_track', time=1))
 
 
 if __name__ == '__main__':
-    Predict(seed=get_seed(), epoch=128, model_version=1751721057)
+   Predict(seed=get_seed(), epoch=256, model_version=1751770203)

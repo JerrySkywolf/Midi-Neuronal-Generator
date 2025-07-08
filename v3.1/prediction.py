@@ -14,19 +14,19 @@ class Predict:
                  seed,
                  epoch: int,
                  model_version,
+                 instrument_code: int = 0,
                  result_save_path: str = 'result',
                  ):
         """
-
+        The main class, called to predict scores.
         :param seed: the start score, need an array in size (1, 8, 4)
         :param epoch: the total length of the generated score will be 8(seed length) + epoch
-        :param model_version:
-        :param result_save_path:
         """
         self.save_path = result_save_path
         self.model = read_model(version=model_version)
         self.seed = seed
         self.epoch = epoch
+        self.instrument = instrument_code
         self.prediction = None
         self.sequence = []
         self.save_file_name = f'{int(time())}-ß'
@@ -59,8 +59,8 @@ class Predict:
         self.track0.append(MetaMessage('end_of_track', time=1))
 
     def save_track1(self):
-        self.track1.append(MetaMessage('track_name', name='Piano', time=0))
-        self.track1.append(Message(type='program_change', program=0, time=0))
+        self.track1.append(MetaMessage('track_name', name='Instrument', time=0))
+        self.track1.append(Message(type='program_change', program=self.instrument, time=0))
         middle = []
         for i in self.sequence:
             if i[0] < 0.5:
